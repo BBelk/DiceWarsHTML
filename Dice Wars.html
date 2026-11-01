@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dice Wars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sea: #cfe2ea;
+  --land-shadow: #8fb0bf;
+  --line: #22304a;
+  --text: #22304a;
+  --muted: #55657d;
+  --panel: #ffffff;
+  --button: #22304a;
+  --button-text: #ffffff;
+  --overlay: rgba(207, 226, 234, 0.82);
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sea: #172638;
+    --land-shadow: #0b1422;
+    --line: #101a2b;
+    --text: #e8eef6;
+    --muted: #a7b6ca;
+    --panel: #22344c;
+    --button: #e8eef6;
+    --button-text: #172638;
+    --overlay: rgba(23, 38, 56, 0.85);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --sea: #172638;
+  --land-shadow: #0b1422;
+  --line: #101a2b;
+  --text: #e8eef6;
+  --muted: #a7b6ca;
+  --panel: #22344c;
+  --button: #e8eef6;
+  --button-text: #172638;
+  --overlay: rgba(23, 38, 56, 0.85);
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--sea);
+  color: var(--text);
+  font-family: "Baloo 2", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem 0.2rem;
+}
+h1 {
+  margin: 0 auto 0 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+label { font-size: 0.95rem; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 0.35rem; }
+select {
+  font: inherit;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 0.1rem 0.4rem;
+  min-height: 36px;
+}
+button {
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--button-text);
+  background: var(--button);
+  border: none;
+  border-radius: 12px;
+  padding: 0.35rem 1.1rem;
+  min-height: 44px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--land-shadow);
+}
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--land-shadow); }
+button:disabled { opacity: 0.4; cursor: default; transform: none; }
+button:focus-visible, select:focus-visible { outline: 3px solid #f0a32c; outline-offset: 2px; }
+main { flex: 1; position: relative; min-height: 0; }
+canvas { position: absolute; inset: 0; display: block; touch-action: manipulation; cursor: pointer; }
+footer { padding: 0.25rem 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.45rem; }
+#players { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; }
+.pl {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--panel);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 0.05rem 0.55rem 0.05rem 0.4rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.pl.turn { border-color: var(--line); }
+.pl.out { opacity: 0.35; }
+.pl small { color: var(--muted); font-weight: 500; }
+.sw { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--line); flex: none; }
+#battle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  min-height: 30px;
+}
+.side { display: flex; align-items: center; gap: 0.35rem; opacity: 0.55; }
+.side.won { opacity: 1; }
+.rolls { display: flex; gap: 2px; }
+.die {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #22304a;
+  border: 1.5px solid var(--line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+.total { font-size: 1.2rem; min-width: 1.6em; text-align: center; }
+.vs { color: var(--muted); font-weight: 500; }
+.bar { display: flex; align-items: center; gap: 0.75rem; }
+#status { flex: 1; margin: 0; font-size: 0.98rem; line-height: 1.3; min-height: 2.6em; display: flex; align-items: center; }
+#end { flex: none; min-width: 120px; font-size: 1.1rem; }
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: var(--overlay);
+}
+#overlay.show { display: grid; }
+.card {
+  background: var(--panel);
+  border: 3px solid var(--line);
+  border-radius: 18px;
+  padding: 1.4rem 1.8rem;
+  text-align: center;
+  max-width: 85%;
+}
+.card h2 { margin: 0 0 0.3rem; font-size: 2rem; font-weight: 800; line-height: 1.1; }
+.card p { margin: 0 0 1rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dice Wars</h1>
+  <div class="controls">
+    <label>Opponents
+      <select id="opponents">
+        <option>1</option><option>2</option><option>3</option><option>4</option>
+        <option selected>5</option><option>6</option><option>7</option>
+      </select>
+    </label>
+    <label>Speed
+      <select id="speed">
+        <option value="normal">Normal</option>
+        <option value="fast">Fast</option>
+      </select>
+    </label>
+    <button id="new">New game</button>
+  </div>
+</header>
+<main id="stage">
+  <canvas id="board" aria-label="Game map"></canvas>
+  <div id="overlay">
+    <div class="card">
+      <h2 id="result-title"></h2>
+      <p id="result-text"></p>
+      <button id="again">Play again</button>
+    </div>
+  </div>
+</main>
+<footer>
+  <div id="players"></div>
+  <div id="battle"></div>
+  <div class="bar">
+    <p id="status"></p>
+    <button id="end" disabled>End turn</button>
+  </div>
+</footer>
+<script>
+const COLS = 24;
+const ROWS = 26;
+const N = COLS * ROWS;
+const AREA_TARGET = 30;
+const MIN_CELLS = 6;
+const MAX_DICE = 8;
+const MAX_STOCK = 64;
+const HUMAN = 0;
+const SQ3 = Math.sqrt(3);
+const COLORS = ["#9a63e0", "#ecc63a", "#52b36d", "#f08a3c", "#3b86d6", "#e2557f", "#4fc6b2", "#b07a4f"];
+const NAMES = ["You", "Yellow", "Green", "Orange", "Blue", "Pink", "Teal", "Brown"];
+const DIRS_EVEN = [[1, 0], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1]];
+const DIRS_ODD = [[1, 0], [1, 1], [0, 1], [-1, 0], [0, -1], [1, -1]];
+const CORNER_COS = [];
+const CORNER_SIN = [];
+for (let k = 0; k < 6; k++) {
+  const ang = (60 * k - 30) * Math.PI / 180;
+  CORNER_COS.push(Math.cos(ang));
+  CORNER_SIN.push(Math.sin(ang));
+}
+const TURN_MSG = "Your turn. Tap one of your territories with 2 or more dice, then tap a neighbor to attack.";
+
+const canvas = document.getElementById("board");
+const ctx = canvas.getContext("2d");
+const stage = document.getElementById("stage");
+const oppSel = document.getElementById("opponents");
+const speedSel = document.getElementById("speed");
+const endBtn = document.getElementById("end");
+const statusEl = document.getElementById("status");
+const playersEl = document.getElementById("players");
+const battleEl = document.getElementById("battle");
+const overlay = document.getElementById("overlay");
+
+const rand = n => Math.floor(Math.random() * n);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const wait = ms => speedSel.value === "fast" ? ms * 0.25 : ms;
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = rand(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const NB = [];
+for (let i = 0; i < N; i++) {
+  const r = Math.floor(i / COLS);
+  const c = i % COLS;
+  const dirs = (r & 1) ? DIRS_ODD : DIRS_EVEN;
+  NB.push(dirs.map(([dc, dr]) => {
+    const nc = c + dc;
+    const nr = r + dr;
+    return (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) ? -1 : nr * COLS + nc;
+  }));
+}
+
+function unitPos(i) {
+  const r = Math.floor(i / COLS);
+  const c = i % COLS;
+  return [SQ3 * (c + 0.5 * (r & 1)), 1.5 * r];
+}
+
+function isEdge(i) {
+  const r = Math.floor(i / COLS);
+  const c = i % COLS;
+  return r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1;
+}
+
+function generateMap() {
+  const land = new Uint8Array(N);
+  const target = Math.floor(N * 0.6);
+  const start = Math.floor(ROWS / 2) * COLS + Math.floor(COLS / 2);
+  const frontier = [start];
+  let count = 0;
+  while (count < target && frontier.length) {
+    const k = rand(frontier.length);
+    const i = frontier[k];
+    frontier[k] = frontier[frontier.length - 1];
+    frontier.pop();
+    if (land[i]) continue;
+    land[i] = 1;
+    count++;
+    for (const n of NB[i]) if (n >= 0 && !land[n] && !isEdge(n)) frontier.push(n);
+  }
+
+  const landCells = [];
+  for (let i = 0; i < N; i++) if (land[i]) landCells.push(i);
+
+  const seeds = [];
+  for (let t = 0; t < 4000 && seeds.length < AREA_TARGET; t++) {
+    const i = landCells[rand(landCells.length)];
+    const [x, y] = unitPos(i);
+    const farEnough = seeds.every(s => {
+      const [sx, sy] = unitPos(s);
+      return (sx - x) ** 2 + (sy - y) ** 2 > 16;
+    });
+    if (farEnough) seeds.push(i);
+  }
+
+  const owner = new Int16Array(N).fill(-1);
+  const fronts = seeds.map(s => [s]);
+  let active = true;
+  while (active) {
+    active = false;
+    for (let k = 0; k < fronts.length; k++) {
+      const f = fronts[k];
+      while (f.length) {
+        const j = rand(f.length);
+        const i = f[j];
+        f[j] = f[f.length - 1];
+        f.pop();
+        if (owner[i] !== -1) continue;
+        owner[i] = k;
+        active = true;
+        for (const n of NB[i]) if (n >= 0 && land[n] && owner[n] === -1) f.push(n);
+        break;
+      }
+    }
+  }
+
+  const K = seeds.length;
+  let merged = true;
+  while (merged) {
+    merged = false;
+    const sizes = new Array(K).fill(0);
+    for (const i of landCells) sizes[owner[i]]++;
+    for (let k = 0; k < K; k++) {
+      if (sizes[k] === 0 || sizes[k] >= MIN_CELLS) continue;
+      const near = new Set();
+      for (const i of landCells) {
+        if (owner[i] !== k) continue;
+        for (const n of NB[i]) if (n >= 0 && owner[n] >= 0 && owner[n] !== k) near.add(owner[n]);
+      }
+      if (!near.size) continue;
+      let best = -1;
+      for (const b of near) if (best < 0 || sizes[b] < sizes[best]) best = b;
+      for (const i of landCells) if (owner[i] === k) owner[i] = best;
+      merged = true;
+      break;
+    }
+  }
+
+  const remap = new Map();
+  const areas = [];
+  const cellArea = new Int16Array(N).fill(-1);
+  for (const i of landCells) {
+    let a = remap.get(owner[i]);
+    if (a === undefined) {
+      a = areas.length;
+      remap.set(owner[i], a);
+      areas.push({ cells: [], adj: new Set(), edges: [], center: i, owner: -1, dice: 1 });
+    }
+    cellArea[i] = a;
+    areas[a].cells.push(i);
+  }
+
+  for (const A of areas) {
+    for (const i of A.cells) {
+      for (let d = 0; d < 6; d++) {
+        const n = NB[i][d];
+        const b = n >= 0 ? cellArea[n] : -1;
+        if (b !== cellArea[i]) {
+          A.edges.push([i, d]);
+          if (b >= 0) A.adj.add(b);
+        }
+      }
+    }
+    let sx = 0;
+    let sy = 0;
+    for (const i of A.cells) {
+      const [x, y] = unitPos(i);
+      sx += x;
+      sy += y;
+    }
+    sx /= A.cells.length;
+    sy /= A.cells.length;
+    let best = A.cells[0];
+    let bestScore = Infinity;
+    for (const i of A.cells) {
+      const inner = NB[i].filter(n => n >= 0 && cellArea[n] === cellArea[i]).length;
+      const [x, y] = unitPos(i);
+      const score = (x - sx) ** 2 + (y - sy) ** 2 - inner * 0.6;
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
+      }
+    }
+    A.center = best;
+  }
+
+  return { cellArea, areas, landCells };
+}
+
+let game = null;
+let token = 0;
+let view = { s: 10, ox: 0, oy: 0, px: new Float32Array(N), py: new Float32Array(N) };
+
+function current() {
+  return game.order[game.turnIdx];
+}
+
+function newGame() {
+  token++;
+  const P = 1 + Number(oppSel.value);
+  let map;
+  do { map = generateMap(); } while (map.areas.length < 16);
+
+  const players = [];
+  for (let p = 0; p < P; p++) {
+    players.push({ id: p, color: COLORS[p], name: NAMES[p], human: p === HUMAN, alive: true, stock: 0 });
+  }
+
+  const ids = shuffle(map.areas.map((_, i) => i));
+  ids.forEach((a, k) => { map.areas[a].owner = k % P; });
+
+  const perPlayer = Math.ceil(map.areas.length / P) * 3;
+  for (let p = 0; p < P; p++) {
+    const own = map.areas.filter(a => a.owner === p);
+    let extra = perPlayer - own.length;
+    while (extra > 0) {
+      const open = own.filter(a => a.dice < MAX_DICE);
+      if (!open.length) break;
+      open[rand(open.length)].dice++;
+      extra--;
+    }
+  }
+
+  game = {
+    ...map,
+    players,
+    order: shuffle([...Array(P).keys()]),
+    turnIdx: 0,
+    selected: -1,
+    target: -1,
+    over: false,
+    busy: true,
+    last: null,
+    token
+  };
+
+  overlay.classList.remove("show");
+  showBattle();
+  layout();
+  startTurn();
+}
+
+function layout() {
+  const W = stage.clientWidth;
+  const H = stage.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!game) return;
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const i of game.landCells) {
+    const [x, y] = unitPos(i);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  minX -= SQ3 / 2 + 0.3;
+  maxX += SQ3 / 2 + 0.3;
+  minY -= 2.6;
+  maxY += 1.6;
+  const s = Math.min(W / (maxX - minX), H / (maxY - minY), 28);
+  const ox = (W - (maxX - minX) * s) / 2 - minX * s;
+  const oy = (H - (maxY - minY) * s) / 2 - minY * s;
+  view.s = s;
+  view.ox = ox;
+  view.oy = oy;
+  for (const i of game.landCells) {
+    const [x, y] = unitPos(i);
+    view.px[i] = ox + x * s;
+    view.py[i] = oy + y * s;
+  }
+  render();
+}
+
+function lighten(hex, t) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const mix = v => Math.round(v + (255 - v) * t);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
+function hexPath(path, x, y, r) {
+  path.moveTo(x + r * CORNER_COS[0], y + r * CORNER_SIN[0]);
+  for (let k = 1; k < 6; k++) path.lineTo(x + r * CORNER_COS[k], y + r * CORNER_SIN[k]);
+  path.closePath();
+}
+
+function edgePath(path, edges, s) {
+  for (const [i, d] of edges) {
+    const x = view.px[i];
+    const y = view.py[i];
+    const k2 = (d + 1) % 6;
+    path.moveTo(x + s * CORNER_COS[d], y + s * CORNER_SIN[d]);
+    path.lineTo(x + s * CORNER_COS[k2], y + s * CORNER_SIN[k2]);
+  }
+}
+
+function drawDie(x, y, a, lw, line) {
+  const hh = a * 0.5;
+  const h = a * 0.85;
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = line;
+  ctx.lineJoin = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(x - a, y);
+  ctx.lineTo(x, y + hh);
+  ctx.lineTo(x, y + hh + h);
+  ctx.lineTo(x - a, y + h);
+  ctx.closePath();
+  ctx.fillStyle = "#e6e1d8";
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x, y + hh);
+  ctx.lineTo(x + a, y);
+  ctx.lineTo(x + a, y + h);
+  ctx.lineTo(x, y + hh + h);
+  ctx.closePath();
+  ctx.fillStyle = "#c9c2b6";
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x, y - hh);
+  ctx.lineTo(x + a, y);
+  ctx.lineTo(x, y + hh);
+  ctx.lineTo(x - a, y);
+  ctx.closePath();
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(x, y, a * 0.2, a * 0.1, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "#22304a";
+  ctx.fill();
+}
+
+function drawStack(x, y, n, s, line) {
+  const a = s * 0.68;
+  const h = a * 0.85;
+  const lw = Math.max(0.8, s * 0.07);
+  const baseY = y - a * 0.55;
+  if (n <= 4) {
+    for (let j = 0; j < n; j++) drawDie(x, baseY - j * h, a, lw, line);
+    return;
+  }
+  for (let j = 0; j < 4; j++) drawDie(x + a * 0.55, baseY - a * 0.3 - j * h, a, lw, line);
+  for (let j = 0; j < n - 4; j++) drawDie(x - a * 0.55, baseY + a * 0.3 - j * h, a, lw, line);
+}
+
+function render() {
+  if (!game) return;
+  const css = getComputedStyle(document.documentElement);
+  const line = css.getPropertyValue("--line").trim();
+  const shadow = css.getPropertyValue("--land-shadow").trim();
+  const s = view.s;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const shadowPath = new Path2D();
+  for (const i of game.landCells) hexPath(shadowPath, view.px[i], view.py[i] + s * 0.45, s + 0.6);
+  ctx.fillStyle = shadow;
+  ctx.fill(shadowPath);
+
+  game.areas.forEach((A, id) => {
+    const p = new Path2D();
+    for (const i of A.cells) hexPath(p, view.px[i], view.py[i], s + 0.6);
+    const base = game.players[A.owner].color;
+    const highlighted = id === game.selected || id === game.target;
+    ctx.fillStyle = highlighted ? lighten(base, 0.45) : base;
+    ctx.fill(p);
+  });
+
+  const borders = new Path2D();
+  for (const A of game.areas) edgePath(borders, A.edges, s);
+  ctx.strokeStyle = line;
+  ctx.lineWidth = Math.max(1.5, s * 0.2);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.stroke(borders);
+
+  for (const id of [game.selected, game.target]) {
+    if (id < 0) continue;
+    const hl = new Path2D();
+    edgePath(hl, game.areas[id].edges, s);
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(2.5, s * 0.32);
+    ctx.stroke(hl);
+  }
+
+  const sorted = game.areas.slice().sort((a, b) => view.py[a.center] - view.py[b.center]);
+  for (const A of sorted) drawStack(view.px[A.center], view.py[A.center], A.dice, s, line);
+}
+
+function largestGroup(p) {
+  const seen = new Set();
+  let best = 0;
+  game.areas.forEach((A, id) => {
+    if (A.owner !== p || seen.has(id)) return;
+    const queue = [id];
+    seen.add(id);
+    let size = 0;
+    while (queue.length) {
+      const cur = queue.pop();
+      size++;
+      for (const n of game.areas[cur].adj) {
+        if (!seen.has(n) && game.areas[n].owner === p) {
+          seen.add(n);
+          queue.push(n);
+        }
+      }
+    }
+    best = Math.max(best, size);
+  });
+  return best;
+}
+
+function reinforce(p) {
+  const player = game.players[p];
+  let add = largestGroup(p) + player.stock;
+  player.stock = 0;
+  const own = game.areas.filter(a => a.owner === p);
+  while (add > 0) {
+    const open = own.filter(a => a.dice < MAX_DICE);
+    if (!open.length) break;
+    open[rand(open.length)].dice++;
+    add--;
+  }
+  player.stock = Math.min(add, MAX_STOCK);
+}
+
+function rollDice(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(1 + rand(6));
+  return out;
+}
+
+function attack(from, to) {
+  const A = game.areas[from];
+  const D = game.areas[to];
+  const atk = A.owner;
+  const def = D.owner;
+  const ar = rollDice(A.dice);
+  const dr = rollDice(D.dice);
+  const as = ar.reduce((x, y) => x + y, 0);
+  const ds = dr.reduce((x, y) => x + y, 0);
+  const win = as > ds;
+  if (win) {
+    D.owner = atk;
+    D.dice = A.dice - 1;
+    A.dice = 1;
+    if (!game.areas.some(a => a.owner === def)) game.players[def].alive = false;
+  } else {
+    A.dice = 1;
+  }
+  game.last = { atk, def, ar, dr, as, ds, win };
+  showBattle();
+  updatePlayers();
+  checkOver();
+}
+
+function checkOver() {
+  if (!game.players[HUMAN].alive) {
+    finish(false);
+    return;
+  }
+  if (game.players.filter(p => p.alive).length === 1) finish(true);
+}
+
+function finish(won) {
+  game.over = true;
+  game.busy = true;
+  endBtn.disabled = true;
+  document.getElementById("result-title").textContent = won ? "You conquered the map" : "You were defeated";
+  document.getElementById("result-text").textContent = won ? "Every territory is yours." : "Your last territory has fallen.";
+  setStatus(won ? "Victory." : "Game over.");
+  overlay.classList.add("show");
+  document.getElementById("again").focus();
+}
+
+function chooseMove(p) {
+  let best = null;
+  let bestScore = -Infinity;
+  game.areas.forEach((A, from) => {
+    if (A.owner !== p || A.dice < 2) return;
+    for (const to of A.adj) {
+      const D = game.areas[to];
+      if (D.owner === p) continue;
+      const diff = A.dice - D.dice;
+      if (diff <= 0 && !(A.dice === MAX_DICE && D.dice === MAX_DICE)) continue;
+      const score = diff * 10 + Math.random() * 5 + (A.dice === MAX_DICE ? 3 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = { from, to };
+      }
+    }
+  });
+  return best;
+}
+
+async function runAI(p) {
+  const t = game.token;
+  game.busy = true;
+  setStatus(`${NAMES[p]} is attacking…`);
+  await sleep(wait(400));
+  if (t !== token) return;
+  for (;;) {
+    const mv = chooseMove(p);
+    if (!mv) break;
+    game.selected = mv.from;
+    game.target = mv.to;
+    render();
+    await sleep(wait(350));
+    if (t !== token) return;
+    attack(mv.from, mv.to);
+    game.selected = -1;
+    render();
+    await sleep(wait(450));
+    if (t !== token) return;
+    game.target = -1;
+    if (game.over) {
+      render();
+      return;
+    }
+  }
+  game.target = -1;
+  reinforce(p);
+  render();
+  updatePlayers();
+  await sleep(wait(300));
+  if (t !== token) return;
+  nextTurn();
+}
+
+function nextTurn() {
+  do {
+    game.turnIdx = (game.turnIdx + 1) % game.order.length;
+  } while (!game.players[current()].alive);
+  startTurn();
+}
+
+function startTurn() {
+  const p = game.players[current()];
+  updatePlayers();
+  render();
+  if (p.human) {
+    game.busy = false;
+    endBtn.disabled = false;
+    setStatus(TURN_MSG);
+  } else {
+    endBtn.disabled = true;
+    runAI(p.id);
+  }
+}
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function updatePlayers() {
+  playersEl.innerHTML = game.order.map((id, idx) => {
+    const p = game.players[id];
+    const group = p.alive ? largestGroup(id) : 0;
+    const classes = ["pl"];
+    if (idx === game.turnIdx && !game.over) classes.push("turn");
+    if (!p.alive) classes.push("out");
+    const label = p.human ? "<span>You</span>" : "";
+    const stock = p.stock ? `<small>+${p.stock}</small>` : "";
+    return `<div class="${classes.join(" ")}" title="${p.name}: ${group} dice at end of turn"><span class="sw" style="background:${p.color}"></span>${label}<b>${group}</b>${stock}</div>`;
+  }).join("");
+}
+
+function side(p, rolls, total, won) {
+  const dice = rolls.map(v => `<span class="die">${v}</span>`).join("");
+  return `<div class="side${won ? " won" : ""}"><span class="sw" style="background:${COLORS[p]}"></span><span class="rolls">${dice}</span><b class="total">${total}</b></div>`;
+}
+
+function showBattle() {
+  const L = game && game.last;
+  if (!L) {
+    battleEl.innerHTML = "";
+    return;
+  }
+  battleEl.innerHTML = side(L.atk, L.ar, L.as, L.win) + '<span class="vs">vs</span>' + side(L.def, L.dr, L.ds, !L.win);
+}
+
+function hitArea(x, y) {
+  let best = -1;
+  let bd = Infinity;
+  for (const i of game.landCells) {
+    const d = (view.px[i] - x) ** 2 + (view.py[i] - y) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  }
+  if (best < 0 || bd > view.s * view.s) return -1;
+  return game.cellArea[best];
+}
+
+function humanTap(id) {
+  if (id < 0) {
+    game.selected = -1;
+    render();
+    setStatus(TURN_MSG);
+    return;
+  }
+  const A = game.areas[id];
+  if (A.owner === HUMAN) {
+    if (game.selected === id) {
+      game.selected = -1;
+      setStatus(TURN_MSG);
+    } else if (A.dice > 1) {
+      game.selected = id;
+      setStatus("Now tap a neighboring territory to attack it.");
+    } else {
+      setStatus("That territory needs at least 2 dice to attack.");
+    }
+    render();
+    return;
+  }
+  if (game.selected < 0) {
+    setStatus("First tap one of your own territories with 2 or more dice.");
+    return;
+  }
+  if (!game.areas[game.selected].adj.has(id)) {
+    setStatus("You can only attack a territory that borders your selected one.");
+    return;
+  }
+  const from = game.selected;
+  game.selected = -1;
+  attack(from, id);
+  render();
+  if (game.over) return;
+  setStatus(game.last.win ? "Captured. Keep attacking or end your turn." : "Your attack failed. Keep going or end your turn.");
+}
+
+canvas.addEventListener("click", e => {
+  if (!game || game.over || game.busy) return;
+  if (!game.players[current()].human) return;
+  const r = canvas.getBoundingClientRect();
+  humanTap(hitArea(e.clientX - r.left, e.clientY - r.top));
+});
+
+endBtn.addEventListener("click", () => {
+  if (!game || game.over || game.busy) return;
+  const p = current();
+  if (!game.players[p].human) return;
+  game.selected = -1;
+  game.busy = true;
+  endBtn.disabled = true;
+  reinforce(p);
+  render();
+  updatePlayers();
+  nextTurn();
+});
+
+document.getElementById("new").addEventListener("click", newGame);
+document.getElementById("again").addEventListener("click", newGame);
+oppSel.addEventListener("change", newGame);
+
+new ResizeObserver(() => layout()).observe(stage);
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+
+newGame();
+</script>
+</body>
+</html>
